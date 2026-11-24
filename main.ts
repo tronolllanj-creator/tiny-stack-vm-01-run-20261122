@@ -1,9 +1,7 @@
-// bounty tiny-stack-vm-01-run-20261122
-// Runs a tiny stack VM over 40 instances and writes outputs.
-import { readFileSync, writeFileSync, mkdirSync, existsSync } from "fs";
+// tiny-stack-vm-01-run-20261122: tiny stack VM.
+import { readFileSync, writeFileSync, mkdirSync } from "fs";
 
-const M0 = 65535, SMAX = 256, CMAX = 64, STEP = 1000000, OMAX = 65536, MEM = 256;
-const IM = { PUSH8: 1, PUSH32: 4, JMP: 2, JZ: 2, JNZ: 2, CALL: 2 };
+const SMAX = 256, CMAX = 64, STEP = 1000000, OMAX = 65536, MEM = 256;
 
 function run(prog: Uint8Array, inp: Uint8Array): { out: Uint8Array; exit: number } {
   const st: Int32Array = new Int32Array(SMAX);
@@ -19,7 +17,6 @@ function run(prog: Uint8Array, inp: Uint8Array): { out: Uint8Array; exit: number
   const push = (v: number): void => { if (sp === SMAX) { exit = 3; return; } st[sp++] = v | 0; };
   const pop2 = (): [number, number] => { if (sp < 2) { sp = 0; exit = 2; return [0, 0]; } const b = st[--sp]; const a = st[--sp]; return [a, b]; };
   const pop3 = (): [number, number, number] => { if (sp < 3) { sp = 0; exit = 2; return [0, 0, 0]; } const c = st[--sp]; const b = st[--sp]; const a = st[--sp]; return [a, b, c]; };
-  const RET = false; const ZEB = false; const XEB = false;
   while (true) {
     if (steps++ >= STEP) { exit = 10; break; }
     if (pc < 0 || pc >= prog.length) { exit = 9; break; }
@@ -27,19 +24,7 @@ function run(prog: Uint8Array, inp: Uint8Array): { out: Uint8Array; exit: number
     let ns = pc + 1;
     if (op === 1) ns += 1; else if (op === 2) ns += 4; else if (op >= 0x30 && op <= 0x33) ns += 2;
     if (ns > prog.length) { exit = 9; break; }
-    if (op < 0x00 || op > 0x07) {
-      if (op < 0x10 || op > 0x1e) {
-        if (op < 0x20 || op > 0x22) {
-          if (op < 0x30 || op > 0x34) {
-            if (op < 0x40 || op > 0x41) {
-              if (op < 0x50 || op > 0x53) { exit = 5; break; }
-            }
-          }
-        }
-      }
-    }
-    const cont = true;
-    let haltCode = 0;
+    if (op > 0x07 && !(op >= 0x10 && op <= 0x1e) && !(op >= 0x20 && op <= 0x22) && !(op >= 0x30 && op <= 0x34) && !(op >= 0x40 && op <= 0x41) && !(op >= 0x50 && op <= 0x53)) { exit = 5; break; }
     switch (op) {
       case 0: exit = 0; break;
       case 1: push(imm8()); break;
@@ -82,7 +67,7 @@ function run(prog: Uint8Array, inp: Uint8Array): { out: Uint8Array; exit: number
     if (exit >= 0) break;
     if (op !== 0x30 && op !== 0x31 && op !== 0x32 && op !== 0x33 && op !== 0x34 && op !== 0) pc = ns;
   }
-  return { out: out.slice(0, oc), exit: exit < 0 ? 0 : exit };
+  return { out: out.slice(0, oc), exit };
 }
 
 const inpDir = process.env.MAKEFUN_INPUT_DIR || "/input";
